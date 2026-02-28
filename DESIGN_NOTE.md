@@ -167,5 +167,5 @@ admin endpoint.
 | Data quality | Basic logging | Great Expectations or dbt tests |
 | Schema evolution | Manual DDL | dbt models + version-controlled migrations |
 | Observability | stdout logging | Azure Monitor + Application Insights |
-| CI/CD | Manual | GitHub Actions → Azure DevOps |
+| CI/CD | GitHub Actions (lint + test); manual deploy via `func` CLI | Full CD via Azure DevOps pipeline |
 | Scale | 7 currencies | Parameterise currencies list in config |
