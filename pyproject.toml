@@ -1,0 +1,13 @@
+[project]
+name = "fx-pipeline"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "azure-functions>=1.24.0",
+    "azure-storage-blob>=12.28.0",
+    "duckdb>=1.4.4",
+    "polars>=1.38.1",
+    "pyarrow>=23.0.1",
+    "requests>=2.32.5",
+]

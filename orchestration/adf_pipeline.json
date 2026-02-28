@@ -1,0 +1,70 @@
+{
+  "name": "pl_fx_rates_daily",
+  "properties": {
+    "description": "Daily FX rate ingestion pipeline. Triggers the Azure Function that fetches ECB rates, computes cross-pairs, and loads them into Azure Synapse Analytics.",
+    "activities": [
+      {
+        "name": "RunFxEtlFunction",
+        "description": "Calls the Azure Function that runs Extract → Transform → Load.",
+        "type": "AzureFunctionActivity",
+        "typeProperties": {
+          "functionAppUrl": {
+            "value": "@pipeline().parameters.functionAppUrl",
+            "type": "Expression"
+          },
+          "functionName": "fx_etl",
+          "method": "POST",
+          "body": {
+            "start_date": {
+              "value": "@formatDateTime(adddays(utcNow(), -1), 'yyyy-MM-dd')",
+              "type": "Expression"
+            },
+            "end_date": {
+              "value": "@formatDateTime(adddays(utcNow(), -1), 'yyyy-MM-dd')",
+              "type": "Expression"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 300
+        }
+      },
+      {
+        "name": "OnFailure_SendAlert",
+        "description": "Sends an alert if the ETL function fails after all retries.",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "RunFxEtlFunction",
+            "dependencyConditions": ["Failed"]
+          }
+        ],
+        "typeProperties": {
+          "url": {
+            "value": "@pipeline().parameters.alertWebhookUrl",
+            "type": "Expression"
+          },
+          "method": "POST",
+          "body": {
+            "text": {
+              "value": "@concat('FX pipeline FAILED on ', formatDateTime(utcNow(), 'yyyy-MM-dd'), '. Run ID: ', pipeline().RunId)",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "functionAppUrl": {
+        "type": "string",
+        "description": "Base URL of the Azure Function App. Retrieved from Key Vault at runtime."
+      },
+      "alertWebhookUrl": {
+        "type": "string",
+        "description": "Teams or Slack webhook URL for failure alerts."
+      }
+    }
+  }
+}

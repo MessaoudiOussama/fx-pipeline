@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Local database (DuckDB)
+*.duckdb
+
+# Azure Function local settings (contains secrets)
+local.settings.json
+
+# uv lock (optional — include if you want reproducible installs)
+# uv.lock
+
+# Windows artifacts
+nul
+
+# IDE
+.vscode/
+.idea/

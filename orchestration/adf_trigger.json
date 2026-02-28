@@ -1,0 +1,36 @@
+{
+  "name": "tr_fx_rates_daily_1000utc",
+  "properties": {
+    "description": "Fires every weekday at 10:00 UTC. ECB publishes rates at ~15:00 UTC, so this safely targets the previous business day.",
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Week",
+        "interval": 1,
+        "startTime": "2026-01-01T10:00:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "weekDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        }
+      }
+    },
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "type": "PipelineReference",
+          "referenceName": "pl_fx_rates_daily"
+        },
+        "parameters": {
+          "functionAppUrl": {
+            "value": "@trigger().properties.functionAppUrl",
+            "type": "Expression"
+          },
+          "alertWebhookUrl": {
+            "value": "@trigger().properties.alertWebhookUrl",
+            "type": "Expression"
+          }
+        }
+      }
+    ]
+  }
+}
