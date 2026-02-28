@@ -28,10 +28,29 @@ jobs:
       - name: Run tests
         run: uv run pytest tests/ -v
 
-  # ── 2. Deploy ──────────────────────────────────────────────────────────────
-  # Deployment is triggered manually from Cloud Shell:
-  #   func azure functionapp publish func-fx-09cf8a69 --python
-  #
-  # Automating this step via GitHub Actions is a documented next improvement.
-  # The func CLI's remote build conflicts with Linux Consumption plan settings
-  # (WEBSITE_CONTENTAZUREFILECONNECTIONSTRING) — a known Azure limitation.
+  # ── 2. Deploy (only on push to main, after tests pass) ────────────────────
+  deploy:
+    name: Deploy to Azure Function App
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Azure Functions Core Tools
+        run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions
+        run: func azure functionapp publish func-fx-09cf8a69 --python
