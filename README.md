@@ -1,15 +1,74 @@
 # FX Rate Ingestion Pipeline
 
 A production-grade ETL pipeline that ingests daily foreign-exchange (FX) rates
-for 7 European currencies, computes all 42 cross-pairs, and loads them into a
-star-schema data warehouse — locally via DuckDB, and on Azure via Synapse Analytics.
+for 7 European currencies, computes all 42 cross-pairs via EUR triangulation,
+and loads them into a star-schema data warehouse — locally via DuckDB, and on
+Azure via ADLS Gen2 + Synapse Analytics.
 
 ---
 
 ## Currencies
 
 `NOK` `EUR` `SEK` `PLN` `RON` `DKK` `CZK`
+
 All directed cross-pairs are computed: **7 × 6 = 42 pairs per trading day**.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      LOCAL                              │
+│                                                         │
+│  Frankfurter API (ECB)                                  │
+│        │                                                │
+│        ▼                                                │
+│  extract.py  ──►  transform.py  ──►  load.py           │
+│  (HTTP call)    (EUR triangul.)    (DuckDB star schema) │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                      AZURE                              │
+│                                                         │
+│  ADF Trigger (Mon–Fri 10:00 UTC)                        │
+│        │                                                │
+│        ▼                                                │
+│  ADF Pipeline ──► Azure Function (HTTP trigger)         │
+│  (monitoring,        │                                  │
+│   retries,           ▼                                  │
+│   alerts)       load_azure.py                           │
+│                      │                                  │
+│                      ▼                                  │
+│              ADLS Gen2 (Parquet, Hive-partitioned)      │
+│                      │                                  │
+│                      ▼                                  │
+│              Synapse Serverless (SQL queries)           │
+│                                                         │
+│  Key Vault — stores all secrets                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Source
+
+**[Frankfurter API](https://frankfurter.dev/)** — free, no API key required,
+backed by the European Central Bank (ECB). Publishes one official reference rate
+per currency per business day. Weekends and ECB public holidays are automatically
+excluded.
+
+**API call:**
+```
+GET https://api.frankfurter.dev/v1/{start}..{end}?base=EUR&symbols=NOK,SEK,PLN,RON,DKK,CZK
+```
+
+**EUR Triangulation:** The API returns rates relative to EUR only. All 42
+cross-pairs are derived from a single API call using the formula:
+```
+rate(A → B) = rate(EUR → B) / rate(EUR → A)
+```
+This avoids 7 separate API calls and produces mathematically consistent results.
 
 ---
 
@@ -17,22 +76,34 @@ All directed cross-pairs are computed: **7 × 6 = 42 pairs per trading day**.
 
 ```
 fx_pipeline/
-├── config.py                        ← All settings (currencies, dates, DB path)
-├── pipeline.py                      ← Entry point: runs Extract → Transform → Load
-├── validate.py                      ← Runs example queries to verify output
+├── .github/
+│   └── workflows/
+│       └── ci_cd.yml                ← GitHub Actions: lint + test + deploy
 ├── etl/
-│   ├── extract.py                   ← Fetches rates from Frankfurter API (ECB)
-│   ├── transform.py                 ← Computes cross-pairs via EUR triangulation (Polars)
-│   └── load.py                      ← Writes star schema to DuckDB
+│   ├── extract.py                   ← Fetches rates from Frankfurter API
+│   ├── transform.py                 ← Computes 42 cross-pairs via EUR triangulation
+│   ├── load.py                      ← Writes star schema to DuckDB (local)
+│   └── load_azure.py                ← Writes Parquet to ADLS Gen2 (cloud)
+├── orchestration/
+│   ├── adf_pipeline.json            ← ADF pipeline definition
+│   ├── adf_trigger.json             ← ADF schedule trigger (Mon–Fri 10:00 UTC)
+│   └── azure_function/              ← Legacy v1 reference (kept for documentation)
 ├── queries/
 │   └── example_queries.sql          ← Reference SQL: lookups, YTD average, YTD % change
-├── orchestration/
-│   ├── azure_function/
-│   │   ├── __init__.py              ← Azure Function entry point (Timer Trigger)
-│   │   └── function.json            ← Cron schedule: daily at 10:00 UTC
-│   ├── adf_pipeline.json            ← Azure Data Factory pipeline definition
-│   └── adf_trigger.json             ← ADF schedule trigger (weekdays only)
-├── fx_warehouse.duckdb              ← Generated — the local fake DWH
+├── synapse/
+│   └── setup.sql                    ← One-time Synapse Serverless setup script
+├── tests/
+│   ├── conftest.py                  ← Shared fixtures (no API calls)
+│   ├── test_extract.py              ← API contract tests (mocked)
+│   ├── test_transform.py            ← Cross-pair logic tests
+│   └── test_load.py                 ← DuckDB load + idempotency tests
+├── config.py                        ← Central configuration (currencies, dates, paths)
+├── pipeline.py                      ← Entry point: Extract → Transform → Load
+├── function_app.py                  ← Azure Function HTTP trigger (called by ADF)
+├── host.json                        ← Azure Functions runtime config
+├── validate.py                      ← Manual validation queries against DuckDB
+├── requirements.txt                 ← Pip-compatible dependencies (generated by uv)
+├── DESIGN_NOTE.md                   ← Architectural decisions and trade-offs
 └── README.md
 ```
 
@@ -40,7 +111,7 @@ fx_pipeline/
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.11+
 - [uv](https://docs.astral.sh/uv/) (modern Python package manager)
 
 ---
@@ -62,7 +133,12 @@ uv run python pipeline.py
 uv run python pipeline.py --start-date 2025-01-01 --end-date 2025-12-31
 ```
 
-### 4. Validate the output
+### 4. Run tests
+```bash
+uv run pytest tests/ -v
+```
+
+### 5. Validate the output
 ```bash
 uv run python -X utf8 validate.py
 ```
@@ -99,30 +175,24 @@ Two YTD metrics are provided:
 
 ---
 
-## Data Source
+## CI/CD
 
-**[Frankfurter API](https://www.frankfurter.app/)** — free, no API key required,
-backed by the European Central Bank (ECB). Publishes one official reference rate
-per currency per business day at ~16:00 CET. Weekends and ECB public holidays
-are automatically excluded.
+Every push to `main` triggers the GitHub Actions workflow:
+
+```
+git push
+    │
+    ├─ ruff lint
+    ├─ pytest (16 tests)
+    └─ if all pass → func azure functionapp publish (auto-deploy)
+```
+
+Deployment requires the `AZURE_CREDENTIALS` secret (Service Principal JSON)
+to be set in the repository's GitHub Actions secrets.
 
 ---
 
 ## Azure Deployment
 
-See `orchestration/` for the production architecture:
-
-```
-Azure Data Factory (daily trigger, monitoring, alerts)
-        │
-        ▼
-Azure Functions (runs ETL code, Timer Trigger: 10:00 UTC)
-        │
-        ├──► Azure Data Lake Storage Gen2 (raw JSON — Bronze layer)
-        │
-        └──► Azure Synapse Analytics (star schema — Gold layer)
-
-Azure Key Vault — stores all secrets and connection strings
-```
-
+See `synapse/setup.sql` for the one-time Synapse Serverless setup.
 See `DESIGN_NOTE.md` for full architecture rationale and trade-offs.
