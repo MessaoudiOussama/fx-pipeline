@@ -13,7 +13,6 @@ Demonstrates that the warehouse is usable and answers the brief's requirements:
   - YTD % change since first trading day of the year
 """
 
-import sys
 import duckdb
 from config import DB_PATH
 

@@ -35,7 +35,6 @@ Schema (star schema)
 """
 
 import logging
-from datetime import datetime
 
 import duckdb
 import polars as pl

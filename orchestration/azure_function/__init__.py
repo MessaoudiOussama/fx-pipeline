@@ -21,7 +21,6 @@ Deployment
 """
 
 import logging
-import os
 from datetime import date, timedelta
 
 import azure.functions as func
