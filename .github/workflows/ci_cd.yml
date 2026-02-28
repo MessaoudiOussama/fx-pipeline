@@ -52,5 +52,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Reset WEBSITE_RUN_FROM_PACKAGE
+        run: |
+          az functionapp config appsettings set \
+            --name func-fx-09cf8a69 \
+            --resource-group rg-fx-pipeline \
+            --settings WEBSITE_RUN_FROM_PACKAGE=1
+
       - name: Deploy to Azure Functions
         run: func azure functionapp publish func-fx-09cf8a69 --python
