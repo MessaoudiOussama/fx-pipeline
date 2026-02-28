@@ -10,7 +10,7 @@ Why Frankfurter?
 - Only returns business days (weekends/ECB holidays are automatically skipped).
 
 API call we make:
-  GET https://api.frankfurter.app/{start}..{end}?from=EUR&to=NOK,SEK,PLN,RON,DKK,CZK
+  GET https://api.frankfurter.dev/v1/{start}..{end}?base=EUR&symbols=NOK,SEK,PLN,RON,DKK,CZK
 
 Example response:
   {
@@ -57,7 +57,7 @@ def fetch_fx_rates(start_date: str, end_date: str) -> dict[str, dict[str, float]
     targets = ",".join(c for c in CURRENCIES if c != BASE_CURRENCY)
 
     url = f"{API_BASE_URL}/{start_date}..{end_date}"
-    params = {"from": BASE_CURRENCY, "to": targets}
+    params = {"base": BASE_CURRENCY, "symbols": targets}
 
     logger.info("Calling Frankfurter API | %s | params=%s", url, params)
 

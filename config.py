@@ -27,11 +27,11 @@ CURRENCY_NAMES: dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# FX Data Source – Frankfurter API (https://www.frankfurter.app/)
+# FX Data Source – Frankfurter API (https://frankfurter.dev/)
 # Free, no API key, backed by the European Central Bank (ECB).
 # Rates are published on ECB business days only (weekends/holidays skipped).
 # ---------------------------------------------------------------------------
-API_BASE_URL: str = "https://api.frankfurter.app"
+API_BASE_URL: str = "https://api.frankfurter.dev/v1"
 API_TIMEOUT_SECONDS: int = 30
 
 # ---------------------------------------------------------------------------
