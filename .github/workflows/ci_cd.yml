@@ -52,12 +52,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Reset WEBSITE_RUN_FROM_PACKAGE
+      - name: Restore Function App settings
         run: |
+          STORAGE_CONN=$(az storage account show-connection-string \
+            --name stfxpipeline09cf8a69 \
+            --resource-group rg-fx-pipeline \
+            --query connectionString --output tsv)
+
           az functionapp config appsettings set \
             --name func-fx-09cf8a69 \
             --resource-group rg-fx-pipeline \
-            --settings WEBSITE_RUN_FROM_PACKAGE=1
+            --settings \
+              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING="$STORAGE_CONN" \
+              WEBSITE_CONTENTSHARE="func-fx-09cf8a69" \
+              AzureWebJobsStorage="$STORAGE_CONN" \
+              WEBSITE_RUN_FROM_PACKAGE=1
 
       - name: Deploy to Azure Functions
         run: func azure functionapp publish func-fx-09cf8a69 --python
