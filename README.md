@@ -19,9 +19,17 @@ All directed cross-pairs are computed: **7 × 6 = 42 pairs per trading day**.
 
 ### Local
 
+The pipeline runs as a Python script triggered manually or via CLI. It fetches rates
+from the Frankfurter API, computes all 42 cross-pairs, and loads them into a local
+DuckDB database following a star schema.
+
 ![Local architecture](images/On%20premise.png)
 
 ### Azure
+
+In the cloud, the same ETL logic runs inside an Azure Function triggered daily by
+Azure Data Factory (Mon–Fri, 10:00 UTC). Transformed data is written as
+Hive-partitioned Parquet files to ADLS Gen2 and queried via Synapse Serverless SQL.
 
 ![Azure architecture](images/Azure.png)
 
