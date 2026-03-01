@@ -16,8 +16,6 @@ Demonstrates that the warehouse is usable and answers the brief's requirements:
 import duckdb
 from config import DB_PATH
 
-SEPARATOR = "-" * 70
-
 
 def run_query(conn: duckdb.DuckDBPyConnection, title: str, sql: str) -> None:
     print(f"\n{'=' * 70}")

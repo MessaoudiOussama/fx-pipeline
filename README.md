@@ -1,6 +1,6 @@
 # FX Rate Ingestion Pipeline
 
-A production-grade ETL pipeline that ingests daily foreign-exchange (FX) rates
+An ETL pipeline that ingests daily foreign-exchange (FX) rates
 for 7 European currencies, computes all 42 cross-pairs via EUR triangulation,
 and loads them into a star-schema data warehouse — locally via DuckDB, and on
 Azure via ADLS Gen2 + Synapse Analytics.

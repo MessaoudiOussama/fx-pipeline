@@ -17,7 +17,7 @@ def test_correct_columns(raw_rates):
 
 
 def test_correct_number_of_rows(raw_rates):
-    # 2 trading days × 42 cross-pairs (7×6 permutations, no A→A) = 84 rows
+    # 2 days × 42 pairs = 84 rows
     df = compute_cross_pairs(raw_rates)
     assert len(df) == 84
 
@@ -28,7 +28,7 @@ def test_all_rates_positive(raw_rates):
 
 
 def test_cross_rate_formula(raw_rates):
-    # rate(NOK→SEK) = EUR→SEK / EUR→NOK
+    # rate(NOK→SEK) should equal EUR→SEK / EUR→NOK
     from datetime import date
     df = compute_cross_pairs(raw_rates)
     expected = raw_rates["2026-02-17"]["SEK"] / raw_rates["2026-02-17"]["NOK"]

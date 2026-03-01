@@ -1,37 +1,8 @@
 """
-etl/load.py – Load layer.
+etl/load.py – Writes the transformed DataFrame into a DuckDB star schema.
 
-Writes the transformed Polars DataFrame into a DuckDB database
-following a star schema designed for easy joining with other DWH tables.
-
-Why DuckDB?
------------
-- Columnar, OLAP-oriented database — the right fit for a data warehouse.
-- Natively reads Polars DataFrames with zero serialisation overhead.
-- Produces a single portable file artifact (.duckdb), as requested by the brief.
-- Locally mirrors what Azure Synapse Analytics does in production.
-- Supports full SQL including window functions needed for YTD calculations.
-
-Schema (star schema)
---------------------
-    dim_currency          dim_date
-    ─────────────         ──────────────────
-    currency_id (PK)      date_id (PK)
-    currency_code         full_date
-    currency_name         year
-                          month
-                          quarter
-                          day
-                          is_weekend
-
-                fact_fx_rates
-                ──────────────────────────────
-                rate_id (PK)
-                date_id          (FK → dim_date)
-                from_currency_id (FK → dim_currency)
-                to_currency_id   (FK → dim_currency)
-                rate
-                created_at
+Tables: dim_currency, dim_date, fact_fx_rates.
+All inserts use ON CONFLICT DO NOTHING (idempotent).
 """
 
 import logging
@@ -43,10 +14,6 @@ from config import CURRENCIES, CURRENCY_NAMES, DB_PATH
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# DDL
-# ---------------------------------------------------------------------------
 
 DDL = """
 CREATE SEQUENCE IF NOT EXISTS seq_currency_id START 1;
@@ -81,10 +48,6 @@ CREATE TABLE IF NOT EXISTS fact_fx_rates (
 """
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _load_dim_currency(conn: duckdb.DuckDBPyConnection) -> None:
     """Insert currencies — skip if already present (idempotent)."""
     for code in CURRENCIES:
@@ -108,9 +71,9 @@ def _load_dim_date(conn: duckdb.DuckDBPyConnection, df: pl.DataFrame) -> None:
             d,
             d.year,
             d.month,
-            (d.month - 1) // 3 + 1,   # quarter
+            (d.month - 1) // 3 + 1,
             d.day,
-            d.weekday() >= 5,          # Saturday=5, Sunday=6
+            d.weekday() >= 5,
         ])
     logger.info("dim_date loaded (%d dates)", len(dates))
 
@@ -121,7 +84,6 @@ def _load_fact(conn: duckdb.DuckDBPyConnection, df: pl.DataFrame) -> None:
 
     DuckDB can query a Polars DataFrame directly via the 'df' variable —
     no need to convert to pandas or write to a file first.
-    The INSERT ... ON CONFLICT makes the load idempotent (safe to re-run).
     """
     conn.execute("""
         INSERT INTO fact_fx_rates (date_id, from_currency_id, to_currency_id, rate)
@@ -138,10 +100,6 @@ def _load_fact(conn: duckdb.DuckDBPyConnection, df: pl.DataFrame) -> None:
     """)
     logger.info("fact_fx_rates loaded (%d rows inserted)", len(df))
 
-
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
 
 def load(df: pl.DataFrame) -> None:
     """
