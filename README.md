@@ -17,24 +17,13 @@ All directed cross-pairs are computed: **7 × 6 = 42 pairs per trading day**.
 
 ## Architecture
 
-```mermaid
-graph LR
-    subgraph Local Architecture
-        API[Frankfurter API] -->|HTTP Call| E[extract.py]
-        E -->|EUR Triangulation| T[transform.py]
-        T -->|DuckDB Star Schema| L[load.py]
-    end
+### Local
 
-graph TD
-    subgraph Azure Cloud Architecture
-        TR[ADF Trigger <br/> Mon–Fri 10:00 UTC] --> P[ADF Pipeline <br/> Monitoring, Retries, Alerts]
-        P -->|Triggers| F[Azure Function <br/> load_azure.py]
-        KV[(Azure Key Vault <br/> Stores Secrets)] -.->|Injects via env| F
-        F -->|Writes to| ADLS[ADLS Gen2 <br/> Parquet, Hive-partitioned]
-        ADLS -->|Queried by| SYN[Synapse Serverless <br/> SQL queries]
-    end
+![Local architecture](images/On%20premise.png)
 
-```
+### Azure
+
+![Azure architecture](images/Azure.png)
 
 ---
 
