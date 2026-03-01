@@ -86,8 +86,7 @@ fx_pipeline/
 │   └── load_azure.py                ← Writes Parquet to ADLS Gen2 (cloud)
 ├── orchestration/
 │   ├── adf_pipeline.json            ← ADF pipeline definition
-│   ├── adf_trigger.json             ← ADF schedule trigger (Mon–Fri 10:00 UTC)
-│   └── azure_function/              ← Legacy v1 reference (kept for documentation)
+│   └── adf_trigger.json             ← ADF schedule trigger (Mon–Fri 10:00 UTC)
 ├── queries/
 │   └── example_queries.sql          ← Reference SQL: lookups, YTD average, YTD % change
 ├── synapse/
