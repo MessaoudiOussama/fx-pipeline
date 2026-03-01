@@ -17,36 +17,23 @@ All directed cross-pairs are computed: **7 × 6 = 42 pairs per trading day**.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                      LOCAL                              │
-│                                                         │
-│  Frankfurter API (ECB)                                  │
-│        │                                                │
-│        ▼                                                │
-│  extract.py  ──►  transform.py  ──►  load.py           │
-│  (HTTP call)    (EUR triangul.)    (DuckDB star schema) │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    subgraph Local Architecture
+        API[Frankfurter API] -->|HTTP Call| E[extract.py]
+        E -->|EUR Triangulation| T[transform.py]
+        T -->|DuckDB Star Schema| L[load.py]
+    end
 
-┌─────────────────────────────────────────────────────────┐
-│                      AZURE                              │
-│                                                         │
-│  ADF Trigger (Mon–Fri 10:00 UTC)                        │
-│        │                                                │
-│        ▼                                                │
-│  ADF Pipeline ──► Azure Function (HTTP trigger)         │
-│  (monitoring,        │                                  │
-│   retries,           ▼                                  │
-│   alerts)       load_azure.py                           │
-│                      │                                  │
-│                      ▼                                  │
-│              ADLS Gen2 (Parquet, Hive-partitioned)      │
-│                      │                                  │
-│                      ▼                                  │
-│              Synapse Serverless (SQL queries)           │
-│                                                         │
-│  Key Vault — stores all secrets                         │
-└─────────────────────────────────────────────────────────┘
+graph TD
+    subgraph Azure Cloud Architecture
+        TR[ADF Trigger <br/> Mon–Fri 10:00 UTC] --> P[ADF Pipeline <br/> Monitoring, Retries, Alerts]
+        P -->|Triggers| F[Azure Function <br/> load_azure.py]
+        KV[(Azure Key Vault <br/> Stores Secrets)] -.->|Injects via env| F
+        F -->|Writes to| ADLS[ADLS Gen2 <br/> Parquet, Hive-partitioned]
+        ADLS -->|Queried by| SYN[Synapse Serverless <br/> SQL queries]
+    end
+
 ```
 
 ---
@@ -59,15 +46,18 @@ per currency per business day. Weekends and ECB public holidays are automaticall
 excluded.
 
 **API call:**
+
 ```
 GET https://api.frankfurter.dev/v1/{start}..{end}?base=EUR&symbols=NOK,SEK,PLN,RON,DKK,CZK
 ```
 
 **EUR Triangulation:** The API returns rates relative to EUR only. All 42
 cross-pairs are derived from a single API call using the formula:
+
 ```
 rate(A → B) = rate(EUR → B) / rate(EUR → A)
 ```
+
 This avoids 7 separate API calls and produces mathematically consistent results.
 
 ---
@@ -118,26 +108,31 @@ fx_pipeline/
 ## Quickstart
 
 ### 1. Install dependencies
+
 ```bash
 uv sync
 ```
 
 ### 2. Run the pipeline (defaults to Jan 1 of current year → today)
+
 ```bash
 uv run python pipeline.py
 ```
 
 ### 3. Run for a custom date range
+
 ```bash
 uv run python pipeline.py --start-date 2025-01-01 --end-date 2025-12-31
 ```
 
 ### 4. Run tests
+
 ```bash
 uv run pytest tests/ -v
 ```
 
 ### 5. Validate the output
+
 ```bash
 uv run python -X utf8 validate.py
 ```
@@ -148,15 +143,16 @@ uv run python -X utf8 validate.py
 
 `validate.py` runs 5 queries against `fx_warehouse.duckdb` and prints results:
 
-| Query | What it checks |
-|-------|----------------|
-| Q1 | Rate for a specific date and currency pair |
-| Q2 | All 42 cross-pairs for a given date |
-| Q3 | Latest available rates for EUR |
-| Q4 | YTD average rate (Jan 1 → latest date) |
-| Q5 | YTD % change (first trading day → latest) |
+| Query | What it checks                             |
+| ----- | ------------------------------------------ |
+| Q1    | Rate for a specific date and currency pair |
+| Q2    | All 42 cross-pairs for a given date        |
+| Q3    | Latest available rates for EUR             |
+| Q4    | YTD average rate (Jan 1 → latest date)     |
+| Q5    | YTD % change (first trading day → latest)  |
 
 Expected row counts after a full YTD run:
+
 - `dim_currency` → 7 rows
 - `dim_date` → ~N trading days (weekends and ECB holidays excluded)
 - `fact_fx_rates` → N × 42 rows
@@ -169,6 +165,7 @@ Expected row counts after a full YTD run:
 current calendar year** to the **latest available date in the warehouse**.
 
 Two YTD metrics are provided:
+
 - `ytd_avg_rate` — average of all daily closing rates in the YTD window
 - `ytd_change_pct` — percentage change from the first rate of the year to the last
 
