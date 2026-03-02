@@ -17,13 +17,6 @@ File structure in ADLS (container: fx-data)
                 month=02/
                     data.parquet
 
-Why Parquet + Hive partitioning?
----------------------------------
-Synapse Serverless understands the year=/month= folder structure natively.
-When a query filters by year or month, Synapse skips irrelevant partitions
-entirely (partition pruning) — only the needed files are read.
-Example: a YTD query WHERE year = 2026 AND month <= 2 reads 2 files,
-not the entire history.
 """
 
 import io

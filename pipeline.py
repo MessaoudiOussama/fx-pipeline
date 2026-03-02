@@ -1,19 +1,6 @@
 """
 pipeline.py – Entry point for the FX rate ingestion pipeline.
 
-Usage
------
-# Run with defaults (Jan 1 of current year → today)
-    uv run python pipeline.py
-
-# Run for a specific date range
-    uv run python pipeline.py --start-date 2025-01-01 --end-date 2025-12-31
-
-Flow
-----
-    Extract  →  fetch daily FX rates from Frankfurter API
-    Transform → compute all 42 cross-pairs via EUR triangulation (Polars)
-    Load      → write star schema into DuckDB (fx_warehouse.duckdb)
 """
 
 import argparse

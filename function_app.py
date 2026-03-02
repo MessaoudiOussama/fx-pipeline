@@ -4,9 +4,6 @@ function_app.py – Azure Functions v2 entry point.
 Uses the decorator-based programming model (v2), which is the modern
 approach for Python Azure Functions — no function.json needed.
 
-Scheduling is handled entirely by Azure Data Factory (Mon-Fri 10:00 UTC).
-The Function App exposes a single HTTP trigger so ADF can call it using the
-native AzureFunctionActivity with a function key — no master key required.
 """
 
 import logging
@@ -23,10 +20,6 @@ app = func.FunctionApp()
 def fx_etl(req: func.HttpRequest) -> func.HttpResponse:
     """
     HTTP trigger called by Azure Data Factory.
-
-    ADF's AzureFunctionActivity posts to /api/fx_etl with a function key.
-    Scheduling (Mon-Fri 10:00 UTC) is owned by the ADF trigger, keeping
-    a single source of truth for the pipeline schedule.
     """
     logging.info("FX ETL triggered via HTTP.")
 

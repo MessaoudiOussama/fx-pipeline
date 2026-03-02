@@ -1,16 +1,6 @@
 """
 validate.py – Runs all example queries against fx_warehouse.duckdb and prints results.
 
-Usage
------
-    uv run python validate.py
-
-Purpose
--------
-Demonstrates that the warehouse is usable and answers the brief's requirements:
-  - Lookups by date and currency pair
-  - YTD average rate
-  - YTD % change since first trading day of the year
 """
 
 import duckdb
