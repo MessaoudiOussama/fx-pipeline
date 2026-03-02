@@ -86,6 +86,38 @@ queries trivial (`WHERE year = 2026`) with no runtime date parsing.
 Surrogate integer keys on all dimension tables follow DWH best practice and are more
 join-efficient than natural string keys.
 
+```mermaid
+erDiagram
+    dim_currency {
+        int     currency_id   PK
+        varchar currency_code
+        varchar currency_name
+    }
+
+    dim_date {
+        int     date_id    PK
+        date    full_date
+        int     year
+        int     month
+        int     quarter
+        int     day
+        bool    is_weekend
+    }
+
+    fact_fx_rates {
+        int       rate_id          PK
+        int       date_id          FK
+        int       from_currency_id FK
+        int       to_currency_id   FK
+        double    rate
+        timestamp created_at
+    }
+
+    dim_date      ||--o{ fact_fx_rates : date_id
+    dim_currency  ||--o{ fact_fx_rates : from_currency_id
+    dim_currency  ||--o{ fact_fx_rates : to_currency_id
+```
+
 ---
 
 ## 6. Idempotency
@@ -117,13 +149,12 @@ platform.
 
 ## 8. What Would Change in a Full Production System
 
-| Concern | Current approach | Production extension |
-|---------|-----------------|----------------------|
-| Raw data retention | Not stored | Raw JSON to ADLS Gen2 (Bronze layer) |
-| DWH | DuckDB (local file) | Azure Synapse Analytics |
-| Secrets | `config.py` | Azure Key Vault |
-| Data quality | Basic logging | Great Expectations or dbt tests |
-| Schema evolution | Manual DDL | dbt models + version-controlled migrations |
-| Observability | stdout logging | Azure Monitor + Application Insights |
-| CI/CD | GitHub Actions (lint + test + deploy on push to main) | Full CD via Azure DevOps pipeline |
-| Scale | 7 currencies | Parameterise currencies list in config |
+| Concern            | Current approach                                      | Production extension                       |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------ |
+| Raw data retention | Not stored                                            | Raw JSON to ADLS Gen2 (Bronze layer)       |
+| DWH                | DuckDB (local file)                                   | Azure Synapse Analytics                    |
+| Data quality       | Basic logging                                         | Great Expectations or dbt tests            |
+| Schema evolution   | Manual DDL                                            | dbt models + version-controlled migrations |
+| Observability      | stdout logging                                        | Azure Monitor + Application Insights       |
+| CI/CD              | GitHub Actions (lint + test + deploy on push to main) | Full CD via Azure DevOps pipeline          |
+| Scale              | 7 currencies                                          | Parameterise currencies list in config     |

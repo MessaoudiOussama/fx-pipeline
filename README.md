@@ -187,9 +187,6 @@ to be set in the repository's GitHub Actions secrets.
 
 ## Azure Deployment
 
-See `synapse/setup.sql` for the one-time Synapse Serverless setup.
-See `DESIGN_NOTE.md` for full architecture rationale and trade-offs.
-
 ### Resource Group
 
 All Azure resources provisioned for this pipeline under a single resource group.
@@ -202,3 +199,6 @@ Successful end-to-end pipeline execution triggered by ADF, showing the
 AzureFunctionActivity completing without errors.
 
 ![ADF pipeline run](images/adf.png)
+
+I'll be very happy to discuss the deployment with more detail during the interview.
+Thank you!
